@@ -10,10 +10,12 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
+  BookOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
-const navItems = [
+const teacherNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: Users, label: 'Students', path: '/students' },
   { icon: Brain, label: 'Predictions', path: '/predictions' },
@@ -22,9 +24,18 @@ const navItems = [
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
+const studentNavItems = [
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+  { icon: BookOpen, label: 'My Profile', path: '/students/1' },
+  { icon: Settings, label: 'Settings', path: '/settings' },
+];
+
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { role } = useAuth();
+
+  const navItems = role === 'teacher' ? teacherNavItems : studentNavItems;
 
   return (
     <aside
@@ -45,6 +56,20 @@ export function Sidebar() {
           </div>
         )}
       </div>
+
+      {/* Role Badge */}
+      {!collapsed && (
+        <div className="px-6 py-3 border-b border-sidebar-border">
+          <div className={cn(
+            "px-3 py-1.5 rounded-full text-xs font-medium text-center",
+            role === 'teacher' 
+              ? "bg-primary/20 text-primary" 
+              : "bg-accent/20 text-accent"
+          )}>
+            {role === 'teacher' ? 'Teacher Portal' : 'Student Portal'}
+          </div>
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
