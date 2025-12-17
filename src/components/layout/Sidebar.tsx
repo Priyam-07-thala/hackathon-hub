@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,13 +21,13 @@ const teacherNavItems = [
   { icon: Users, label: 'Students', path: '/students' },
   { icon: Brain, label: 'Predictions', path: '/predictions' },
   { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+  { icon: MessageSquare, label: 'Messages', path: '/messages' },
   { icon: Upload, label: 'Upload Data', path: '/upload' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
 const studentNavItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: BookOpen, label: 'My Profile', path: '/students/1' },
+  { icon: LayoutDashboard, label: 'My Dashboard', path: '/my-dashboard' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
