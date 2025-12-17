@@ -6,12 +6,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
+import StudentDashboard from "./pages/StudentDashboard";
 import Students from "./pages/Students";
 import StudentProfile from "./pages/StudentProfile";
 import Predictions from "./pages/Predictions";
 import Analytics from "./pages/Analytics";
 import Upload from "./pages/Upload";
 import Settings from "./pages/Settings";
+import Messages from "./pages/Messages";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -29,6 +31,11 @@ const App = () => (
             <Route path="/" element={
               <ProtectedRoute>
                 <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/my-dashboard" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentDashboard />
               </ProtectedRoute>
             } />
             <Route path="/students" element={
@@ -54,6 +61,11 @@ const App = () => (
             <Route path="/upload" element={
               <ProtectedRoute allowedRoles={['teacher']}>
                 <Upload />
+              </ProtectedRoute>
+            } />
+            <Route path="/messages" element={
+              <ProtectedRoute allowedRoles={['teacher']}>
+                <Messages />
               </ProtectedRoute>
             } />
             <Route path="/settings" element={

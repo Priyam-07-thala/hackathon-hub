@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message_type: Database["public"]["Enums"]["message_type"]
+          recipient_id: string
+          sender_id: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message_type?: Database["public"]["Enums"]["message_type"]
+          recipient_id: string
+          sender_id: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message_type?: Database["public"]["Enums"]["message_type"]
+          recipient_id?: string
+          sender_id?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -81,6 +117,7 @@ export type Database = {
     }
     Enums: {
       app_role: "teacher" | "student"
+      message_type: "alert" | "recommendation" | "general"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -209,6 +246,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["teacher", "student"],
+      message_type: ["alert", "recommendation", "general"],
     },
   },
 } as const
