@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Brain, RefreshCw, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import { Brain, RefreshCw, AlertTriangle, CheckCircle, Clock, Shield } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -12,13 +12,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { sampleStudents, calculateRiskLevel } from '@/data/sampleStudents';
+import { sampleStudents } from '@/data/sampleStudents';
+import { getModelInfo, predictRisk } from '@/lib/mlPredictor';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function Predictions() {
   const [isRetraining, setIsRetraining] = useState(false);
   const [lastTrained, setLastTrained] = useState('2024-12-14 10:30 AM');
+  
+  const modelInfo = getModelInfo();
 
   const handleRetrain = () => {
     setIsRetraining(true);
@@ -31,9 +34,39 @@ export default function Predictions() {
     }, 3000);
   };
 
-  const sortedByRisk = [...sampleStudents].sort(
+  // Calculate predictions using the ML model
+  const studentsWithPredictions = sampleStudents.map(student => {
+    const prediction = predictRisk({
+      attendance: student.attendance,
+      avgMarks: student.avgMarks,
+      assignmentCompletion: student.assignmentCompletion,
+      behaviorScore: student.behaviorScore,
+    });
+    return {
+      ...student,
+      riskLevel: prediction.riskLevel,
+      riskProbability: prediction.riskProbability,
+    };
+  });
+
+  const sortedByRisk = [...studentsWithPredictions].sort(
     (a, b) => b.riskProbability - a.riskProbability
   );
+
+  const getRiskIcon = (level: string) => {
+    switch (level) {
+      case 'Very Low':
+        return <Shield className="w-3 h-3 mr-1" />;
+      case 'Low':
+        return <CheckCircle className="w-3 h-3 mr-1" />;
+      case 'Medium':
+        return <Clock className="w-3 h-3 mr-1" />;
+      case 'High':
+        return <AlertTriangle className="w-3 h-3 mr-1" />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <Layout title="Predictions" subtitle="ML-powered student risk predictions">
@@ -47,7 +80,7 @@ export default function Predictions() {
             <div>
               <h3 className="text-xl font-semibold">Risk Prediction Model</h3>
               <p className="text-muted-foreground">
-                Random Forest Classifier • 4 Features • 92% Accuracy
+                {modelInfo.name} • {modelInfo.featureCount} Features • {Math.round(modelInfo.accuracy * 100)}% Accuracy
               </p>
               <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                 <Clock className="w-4 h-4" />
@@ -69,19 +102,19 @@ export default function Predictions() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-border">
           <div>
             <p className="text-sm text-muted-foreground">Accuracy</p>
-            <p className="text-2xl font-bold text-success">92%</p>
+            <p className="text-2xl font-bold text-success">{Math.round(modelInfo.accuracy * 100)}%</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Precision</p>
-            <p className="text-2xl font-bold">89%</p>
+            <p className="text-2xl font-bold">{Math.round(modelInfo.precision * 100)}%</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Recall</p>
-            <p className="text-2xl font-bold">91%</p>
+            <p className="text-2xl font-bold">{Math.round(modelInfo.recall * 100)}%</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">F1 Score</p>
-            <p className="text-2xl font-bold">90%</p>
+            <p className="text-2xl font-bold">{Math.round(modelInfo.f1Score * 100)}%</p>
           </div>
         </div>
       </div>
@@ -93,30 +126,30 @@ export default function Predictions() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Average Marks</span>
-              <span className="text-sm text-muted-foreground">35%</span>
+              <span className="text-sm text-muted-foreground">{Math.round(modelInfo.weights.avgMarks * 100)}%</span>
             </div>
-            <Progress value={35} className="h-3" />
+            <Progress value={modelInfo.weights.avgMarks * 100} className="h-3" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Attendance</span>
-              <span className="text-sm text-muted-foreground">30%</span>
+              <span className="text-sm text-muted-foreground">{Math.round(modelInfo.weights.attendance * 100)}%</span>
             </div>
-            <Progress value={30} className="h-3" />
+            <Progress value={modelInfo.weights.attendance * 100} className="h-3" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Assignment Completion</span>
-              <span className="text-sm text-muted-foreground">20%</span>
+              <span className="text-sm text-muted-foreground">{Math.round(modelInfo.weights.assignmentCompletion * 100)}%</span>
             </div>
-            <Progress value={20} className="h-3" />
+            <Progress value={modelInfo.weights.assignmentCompletion * 100} className="h-3" />
           </div>
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium">Behavior Score</span>
-              <span className="text-sm text-muted-foreground">15%</span>
+              <span className="text-sm text-muted-foreground">{Math.round(modelInfo.weights.behaviorScore * 100)}%</span>
             </div>
-            <Progress value={15} className="h-3" />
+            <Progress value={modelInfo.weights.behaviorScore * 100} className="h-3" />
           </div>
         </div>
       </div>
@@ -153,14 +186,13 @@ export default function Predictions() {
                   <TableCell>
                     <Badge
                       className={cn(
+                        student.riskLevel === 'Very Low' && 'risk-badge-very-low',
                         student.riskLevel === 'Low' && 'risk-badge-low',
                         student.riskLevel === 'Medium' && 'risk-badge-medium',
                         student.riskLevel === 'High' && 'risk-badge-high'
                       )}
                     >
-                      {student.riskLevel === 'Low' && <CheckCircle className="w-3 h-3 mr-1" />}
-                      {student.riskLevel === 'Medium' && <Clock className="w-3 h-3 mr-1" />}
-                      {student.riskLevel === 'High' && <AlertTriangle className="w-3 h-3 mr-1" />}
+                      {getRiskIcon(student.riskLevel)}
                       {student.riskLevel}
                     </Badge>
                   </TableCell>

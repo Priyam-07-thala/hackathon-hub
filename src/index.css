@@ -36,6 +36,7 @@
     --warning: 38 92% 55%;
     --warning-foreground: 215 25% 15%;
 
+    --risk-very-low: 160 70% 38%;
     --risk-low: 145 65% 42%;
     --risk-medium: 38 92% 55%;
     --risk-high: 0 72% 55%;
@@ -115,6 +116,10 @@
 @layer components {
   .glass-card {
     @apply bg-card/80 backdrop-blur-sm border border-border/50 shadow-md;
+  }
+
+  .risk-badge-very-low {
+    @apply bg-[hsl(160,70%,38%)]/15 text-[hsl(160,70%,38%)] border border-[hsl(160,70%,38%)]/30;
   }
 
   .risk-badge-low {

@@ -166,6 +166,7 @@ export default function StudentDashboard() {
 
   const getRiskBadgeClass = (level: string) => {
     switch (level) {
+      case 'Very Low': return 'risk-badge-very-low';
       case 'Low': return 'risk-badge-low';
       case 'Medium': return 'risk-badge-medium';
       case 'High': return 'risk-badge-high';
