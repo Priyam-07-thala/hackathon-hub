@@ -1,3 +1,5 @@
+import { predictRisk, generateRecommendations as generateMLRecommendations, type RiskLevel } from '@/lib/mlPredictor';
+
 export interface Student {
   id: string;
   name: string;
@@ -8,7 +10,7 @@ export interface Student {
   avgMarks: number;
   assignmentCompletion: number;
   behaviorScore: number;
-  riskLevel: 'Low' | 'Medium' | 'High';
+  riskLevel: RiskLevel;
   riskProbability: number;
   trend: 'improving' | 'stable' | 'declining';
   subjects: SubjectScore[];
@@ -23,76 +25,36 @@ export interface SubjectScore {
   trend: 'up' | 'down' | 'stable';
 }
 
-// ML-like risk prediction algorithm
+// ML-based risk prediction using the trained model
 export function calculateRiskLevel(
   attendance: number,
   avgMarks: number,
   assignmentCompletion: number,
   behaviorScore: number
-): { level: 'Low' | 'Medium' | 'High'; probability: number } {
-  // Weighted scoring based on feature importance
-  const weights = {
-    attendance: 0.3,
-    avgMarks: 0.35,
-    assignmentCompletion: 0.2,
-    behaviorScore: 0.15,
+): { level: RiskLevel; probability: number } {
+  const result = predictRisk({
+    attendance,
+    avgMarks,
+    assignmentCompletion,
+    behaviorScore,
+  });
+  
+  return { 
+    level: result.riskLevel, 
+    probability: result.riskProbability 
   };
-
-  const normalizedAttendance = attendance / 100;
-  const normalizedMarks = avgMarks / 100;
-  const normalizedAssignment = assignmentCompletion / 100;
-  const normalizedBehavior = behaviorScore / 10;
-
-  const score =
-    normalizedAttendance * weights.attendance +
-    normalizedMarks * weights.avgMarks +
-    normalizedAssignment * weights.assignmentCompletion +
-    normalizedBehavior * weights.behaviorScore;
-
-  // Convert to risk (inverse of score)
-  const riskScore = 1 - score;
-  const probability = Math.round(riskScore * 100);
-
-  if (riskScore < 0.3) {
-    return { level: 'Low', probability };
-  } else if (riskScore < 0.6) {
-    return { level: 'Medium', probability };
-  } else {
-    return { level: 'High', probability };
-  }
 }
 
 export function generateRecommendations(student: Student): string[] {
-  const recommendations: string[] = [];
-
-  if (student.attendance < 75) {
-    recommendations.push('Improve attendance - aim for at least 85% attendance rate');
-    recommendations.push('Set up daily reminders for classes');
-  }
-
-  if (student.avgMarks < 50) {
-    recommendations.push('Schedule extra tutoring sessions for weak subjects');
-    recommendations.push('Practice with previous year question papers');
-  } else if (student.avgMarks < 70) {
-    recommendations.push('Focus on problem areas through targeted study');
-  }
-
-  if (student.assignmentCompletion < 80) {
-    recommendations.push('Create a study schedule to complete assignments on time');
-    recommendations.push('Break large assignments into smaller tasks');
-  }
-
-  if (student.behaviorScore < 6) {
-    recommendations.push('Schedule counseling session to discuss challenges');
-    recommendations.push('Engage in extracurricular activities');
-  }
-
-  if (recommendations.length === 0) {
-    recommendations.push('Keep up the excellent work!');
-    recommendations.push('Consider helping peers who may be struggling');
-  }
-
-  return recommendations.slice(0, 4);
+  return generateMLRecommendations(
+    {
+      attendance: student.attendance,
+      avgMarks: student.avgMarks,
+      assignmentCompletion: student.assignmentCompletion,
+      behaviorScore: student.behaviorScore,
+    },
+    student.riskLevel
+  );
 }
 
 export const sampleStudents: Student[] = [

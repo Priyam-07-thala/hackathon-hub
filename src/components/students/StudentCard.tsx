@@ -79,6 +79,7 @@ export function StudentCard({ student }: StudentCardProps) {
           <Badge
             className={cn(
               'font-medium',
+              student.riskLevel === 'Very Low' && 'risk-badge-very-low',
               student.riskLevel === 'Low' && 'risk-badge-low',
               student.riskLevel === 'Medium' && 'risk-badge-medium',
               student.riskLevel === 'High' && 'risk-badge-high'

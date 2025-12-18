@@ -26,11 +26,13 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { sampleStudents } from '@/data/sampleStudents';
+import { predictRisk, getModelInfo } from '@/lib/mlPredictor';
 import { cn } from '@/lib/utils';
 
 export default function StudentProfile() {
   const { id } = useParams();
   const student = sampleStudents.find((s) => s.id === id);
+  const modelInfo = getModelInfo();
 
   if (!student) {
     return (
@@ -45,6 +47,14 @@ export default function StudentProfile() {
     );
   }
 
+  // Get live prediction from ML model
+  const prediction = predictRisk({
+    attendance: student.attendance,
+    avgMarks: student.avgMarks,
+    assignmentCompletion: student.assignmentCompletion,
+    behaviorScore: student.behaviorScore,
+  });
+
   const TrendIcon =
     student.trend === 'improving'
       ? TrendingUp
@@ -57,11 +67,12 @@ export default function StudentProfile() {
     score: s.score,
   }));
 
+  // Use actual ML model weights
   const featureImportance = [
-    { feature: 'Attendance', importance: 30, value: student.attendance },
-    { feature: 'Avg Marks', importance: 35, value: student.avgMarks },
-    { feature: 'Assignments', importance: 20, value: student.assignmentCompletion },
-    { feature: 'Behavior', importance: 15, value: student.behaviorScore * 10 },
+    { feature: 'Average Marks', importance: Math.round(modelInfo.weights.avgMarks * 100), value: student.avgMarks },
+    { feature: 'Attendance', importance: Math.round(modelInfo.weights.attendance * 100), value: student.attendance },
+    { feature: 'Assignments', importance: Math.round(modelInfo.weights.assignmentCompletion * 100), value: student.assignmentCompletion },
+    { feature: 'Behavior', importance: Math.round(modelInfo.weights.behaviorScore * 100), value: student.behaviorScore * 10 },
   ];
 
   return (
@@ -99,12 +110,13 @@ export default function StudentProfile() {
             <Badge
               className={cn(
                 'text-lg px-4 py-1',
-                student.riskLevel === 'Low' && 'risk-badge-low',
-                student.riskLevel === 'Medium' && 'risk-badge-medium',
-                student.riskLevel === 'High' && 'risk-badge-high'
+                prediction.riskLevel === 'Very Low' && 'risk-badge-very-low',
+                prediction.riskLevel === 'Low' && 'risk-badge-low',
+                prediction.riskLevel === 'Medium' && 'risk-badge-medium',
+                prediction.riskLevel === 'High' && 'risk-badge-high'
               )}
             >
-              {student.riskLevel} Risk ({student.riskProbability}%)
+              {prediction.riskLevel} Risk ({prediction.riskProbability}%)
             </Badge>
             <div
               className={cn(
@@ -239,17 +251,18 @@ export default function StudentProfile() {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium">Risk Probability</span>
-                <span className="text-2xl font-bold">{student.riskProbability}%</span>
+                <span className="text-2xl font-bold">{prediction.riskProbability}%</span>
               </div>
               <div className="h-4 bg-secondary rounded-full overflow-hidden">
                 <div
                   className={cn(
                     'h-full transition-all duration-500',
-                    student.riskProbability < 30 && 'bg-success',
-                    student.riskProbability >= 30 && student.riskProbability < 60 && 'bg-warning',
-                    student.riskProbability >= 60 && 'bg-destructive'
+                    prediction.riskProbability < 15 && 'bg-[hsl(160,70%,38%)]',
+                    prediction.riskProbability >= 15 && prediction.riskProbability < 30 && 'bg-success',
+                    prediction.riskProbability >= 30 && prediction.riskProbability < 50 && 'bg-warning',
+                    prediction.riskProbability >= 50 && 'bg-destructive'
                   )}
-                  style={{ width: `${student.riskProbability}%` }}
+                  style={{ width: `${prediction.riskProbability}%` }}
                 />
               </div>
             </div>
