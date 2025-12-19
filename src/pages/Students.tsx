@@ -3,7 +3,7 @@ import { Search, Filter, SlidersHorizontal } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { StudentCard } from '@/components/students/StudentCard';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+
 import {
   Select,
   SelectContent,
