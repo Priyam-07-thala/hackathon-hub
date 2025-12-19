@@ -137,9 +137,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setRole(null);
-    setProfile(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setRole(null);
+      setProfile(null);
+    } catch (error) {
+      // Even if sign out fails, clear local state
+      setRole(null);
+      setProfile(null);
+      if (import.meta.env.DEV) {
+        console.error('Error signing out:', error);
+      }
+    }
   };
 
   return (
