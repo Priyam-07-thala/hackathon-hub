@@ -20,27 +20,20 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { predictRisk } from '@/lib/mlPredictor';
 
 interface PreviewData {
   headers: string[];
   rows: string[][];
 }
 
-const sampleCSVData: PreviewData = {
-  headers: ['Name', 'Roll No', 'Class', 'Attendance', 'Avg Marks', 'Assignment Completion', 'Behavior Score'],
-  rows: [
-    ['Rahul Verma', 'CS2024011', '10-A', '88', '72', '85', '7'],
-    ['Neha Sharma', 'CS2024012', '10-A', '75', '65', '70', '6'],
-    ['Aditya Kumar', 'CS2024013', '10-B', '92', '88', '95', '9'],
-    ['Pooja Singh', 'CS2024014', '10-B', '60', '45', '50', '5'],
-    ['Karan Patel', 'CS2024015', '10-A', '85', '78', '82', '8'],
-  ],
-};
-
 const dbFields = [
   'name',
   'rollNo',
   'class',
+  'studentEmail',
   'attendance',
   'avgMarks',
   'assignmentCompletion',
@@ -48,6 +41,7 @@ const dbFields = [
 ];
 
 export default function Upload() {
+  const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
@@ -73,44 +67,115 @@ export default function Upload() {
     handleFileSelect(droppedFile);
   }, []);
 
+  const parseCSV = (text: string): PreviewData => {
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const rows = lines.slice(1).map(line => {
+      // Handle CSV with quoted values
+      const matches = line.match(/(".*?"|[^,]+)/g) || [];
+      return matches.map(cell => cell.trim().replace(/^"|"$/g, ''));
+    });
+    return { headers, rows };
+  };
+
+  const autoMapFields = (headers: string[]) => {
+    const autoMapping: Record<string, string> = {};
+    headers.forEach((header) => {
+      const h = header.toLowerCase().replace(/\s/g, '');
+      if (h.includes('name') && !h.includes('email')) autoMapping[header] = 'name';
+      else if (h.includes('roll') || h.includes('id')) autoMapping[header] = 'rollNo';
+      else if (h.includes('class') || h.includes('grade')) autoMapping[header] = 'class';
+      else if (h.includes('email')) autoMapping[header] = 'studentEmail';
+      else if (h.includes('attendance')) autoMapping[header] = 'attendance';
+      else if (h.includes('avg') || h.includes('mark') || h.includes('score')) {
+        if (!autoMapping[header]) autoMapping[header] = 'avgMarks';
+      }
+      else if (h.includes('assignment') || h.includes('completion')) autoMapping[header] = 'assignmentCompletion';
+      else if (h.includes('behavior') || h.includes('behaviour')) autoMapping[header] = 'behaviorScore';
+    });
+    return autoMapping;
+  };
+
   const handleFileSelect = (selectedFile: File) => {
     if (selectedFile && selectedFile.name.endsWith('.csv')) {
       setFile(selectedFile);
-      // Simulate parsing - in real app, parse actual CSV
-      setPreviewData(sampleCSVData);
-      // Auto-map fields with matching names
-      const autoMapping: Record<string, string> = {};
-      sampleCSVData.headers.forEach((header) => {
-        const matchingField = dbFields.find(
-          (field) => field.toLowerCase() === header.toLowerCase().replace(/\s/g, '')
-        );
-        if (matchingField) {
-          autoMapping[header] = matchingField;
-        }
-      });
-      setFieldMapping(autoMapping);
-      toast.success('File loaded successfully!');
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        const parsed = parseCSV(text);
+        setPreviewData(parsed);
+        setFieldMapping(autoMapFields(parsed.headers));
+        toast.success('File loaded successfully!');
+      };
+      reader.readAsText(selectedFile);
     } else {
       toast.error('Please upload a valid CSV file');
     }
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
+    if (!user || !previewData) return;
+
     setIsUploading(true);
     setUploadProgress(0);
 
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          setUploadComplete(true);
-          toast.success('Data uploaded and predictions generated!');
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 300);
+    const headerToIndex = previewData.headers.reduce((acc, h, i) => {
+      acc[h] = i;
+      return acc;
+    }, {} as Record<string, number>);
+
+    // Find which header maps to which field
+    const fieldToHeaderIndex: Record<string, number> = {};
+    Object.entries(fieldMapping).forEach(([header, field]) => {
+      fieldToHeaderIndex[field] = headerToIndex[header];
+    });
+
+    const students = previewData.rows.map(row => {
+      const attendance = parseFloat(row[fieldToHeaderIndex['attendance']] || '0') || 0;
+      const avgMarks = parseFloat(row[fieldToHeaderIndex['avgMarks']] || '0') || 0;
+      const assignmentCompletion = parseFloat(row[fieldToHeaderIndex['assignmentCompletion']] || '0') || 0;
+      const behaviorScore = parseFloat(row[fieldToHeaderIndex['behaviorScore']] || '0') || 0;
+
+      const prediction = predictRisk({ attendance, avgMarks, assignmentCompletion, behaviorScore });
+
+      return {
+        teacher_id: user.id,
+        name: row[fieldToHeaderIndex['name']] || 'Unknown',
+        roll_no: row[fieldToHeaderIndex['rollNo']] || null,
+        class: row[fieldToHeaderIndex['class']] || null,
+        student_email: row[fieldToHeaderIndex['studentEmail']] || `${Date.now()}-${Math.random()}@temp.local`,
+        attendance,
+        avg_marks: avgMarks,
+        assignment_completion: assignmentCompletion,
+        behavior_score: behaviorScore,
+        risk_level: prediction.riskLevel,
+        risk_probability: prediction.riskProbability,
+      };
+    });
+
+    // Upload in batches with progress
+    const batchSize = 10;
+    
+    for (let i = 0; i < students.length; i += batchSize) {
+      const batch = students.slice(i, i + batchSize);
+      
+      const { error } = await supabase
+        .from('student_data')
+        .upsert(batch, { onConflict: 'teacher_id,student_email' });
+
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error('Failed to upload some records');
+      }
+
+      setUploadProgress(Math.round(((i + batchSize) / students.length) * 100));
+    }
+
+    setUploadProgress(100);
+    setIsUploading(false);
+    setUploadComplete(true);
+    toast.success('Data uploaded and predictions generated!');
   };
 
   const resetUpload = () => {
@@ -298,18 +363,18 @@ export default function Upload() {
             <h4 className="font-medium mb-2">Required Columns</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• Name (student full name)</li>
-              <li>• Roll No (unique identifier)</li>
-              <li>• Class (e.g., 10-A)</li>
+              <li>• Email (student email - for linking to their account)</li>
               <li>• Attendance (0-100%)</li>
+              <li>• Avg Marks (0-100%)</li>
             </ul>
           </div>
           <div>
             <h4 className="font-medium mb-2">Optional Columns</h4>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Avg Marks (0-100%)</li>
+              <li>• Roll No (unique identifier)</li>
+              <li>• Class (e.g., 10-A)</li>
               <li>• Assignment Completion (0-100%)</li>
               <li>• Behavior Score (0-10)</li>
-              <li>• Email (contact)</li>
             </ul>
           </div>
         </div>

@@ -10,7 +10,7 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
-  BookOpen,
+  
   MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';

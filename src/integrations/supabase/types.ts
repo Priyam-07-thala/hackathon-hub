@@ -77,6 +77,57 @@ export type Database = {
         }
         Relationships: []
       }
+      student_data: {
+        Row: {
+          assignment_completion: number
+          attendance: number
+          avg_marks: number
+          behavior_score: number
+          class: string | null
+          created_at: string
+          id: string
+          name: string
+          risk_level: string
+          risk_probability: number
+          roll_no: string | null
+          student_email: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_completion?: number
+          attendance?: number
+          avg_marks?: number
+          behavior_score?: number
+          class?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          risk_level?: string
+          risk_probability?: number
+          roll_no?: string | null
+          student_email: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_completion?: number
+          attendance?: number
+          avg_marks?: number
+          behavior_score?: number
+          class?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          risk_level?: string
+          risk_probability?: number
+          roll_no?: string | null
+          student_email?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

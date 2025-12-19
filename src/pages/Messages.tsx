@@ -58,7 +58,13 @@ export default function Messages() {
         .in('user_id', studentIds);
       
       if (profiles) {
-        setStudents(profiles);
+        // Transform to handle null values
+        const transformedProfiles: StudentProfile[] = profiles.map(p => ({
+          user_id: p.user_id,
+          full_name: p.full_name || 'Unknown Student',
+          email: p.email || ''
+        }));
+        setStudents(transformedProfiles);
       }
     }
   };
@@ -142,7 +148,7 @@ export default function Messages() {
     }
   };
 
-  const getTypeBadgeVariant = (type: string) => {
+  const getTypeBadgeVariant = (type: string): "destructive" | "secondary" | "outline" => {
     switch (type) {
       case 'alert': return 'destructive';
       case 'recommendation': return 'secondary';
@@ -187,7 +193,7 @@ export default function Messages() {
               <label className="text-sm font-medium text-muted-foreground mb-2 block">
                 Message Type
               </label>
-              <Select value={messageType} onValueChange={(v) => setMessageType(v as any)}>
+              <Select value={messageType} onValueChange={(v) => setMessageType(v as 'alert' | 'recommendation' | 'general')}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -274,7 +280,7 @@ export default function Messages() {
                         {getTypeIcon(msg.message_type)}
                         <span className="font-medium text-sm">{msg.subject}</span>
                       </div>
-                      <Badge variant={getTypeBadgeVariant(msg.message_type) as any}>
+                      <Badge variant={getTypeBadgeVariant(msg.message_type)}>
                         {msg.message_type}
                       </Badge>
                     </div>
